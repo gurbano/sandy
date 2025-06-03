@@ -1,0 +1,35 @@
+{
+  "name": "my-react-three-fiber-app",
+  "version": "1.0.0",
+  "description": "A basic React Three Fiber project with TypeScript and Hot Reload.",
+  "scripts": {
+    "build": "rollup --config rollup.config.ts --configPlugin typescript",
+    "start": "rollup --config rollup.config.ts --configPlugin typescript --watch"
+  },
+  "dependencies": {
+    "@react-three/drei": "10.1.2",
+    "@react-three/fiber": "9.1.2",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "three": "0.177.0",
+    "tslib": "^2.8.1"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^28.0.3",
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "@rollup/plugin-replace": "^6.0.2",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-typescript": "^12.1.2",
+    "@rollup/plugin-url": "^8.0.2",
+    "@types/node": "^22.15.29",
+    "@types/react": "^19.1.6",
+    "@types/react-dom": "^19.1.5",
+    "@types/three": "^0.177.0",
+    "rollup": "^4.41.1",
+    "rollup-plugin-livereload": "^2.0.5",
+    "rollup-plugin-postcss": "^4.0.2",
+    "rollup-plugin-serve": "^3.0.0",
+    "rollup-plugin-typescript2": "^0.36.0",
+    "typescript": "^5.8.3"
+  }
+}
