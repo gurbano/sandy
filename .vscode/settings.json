@@ -1,0 +1,23 @@
+{
+    "mcp": {        
+        "inputs": [],
+        "servers": {
+            "mcp-server-time": {
+                "command": "python",
+                "args": [
+                    "-m",
+                    "mcp_server_time",
+                    "--local-timezone=Europe/London"
+                ],
+                "env": {}
+            },
+            "sequential-thinking": {
+                "command": "npx",
+                "args": [
+                    "-y",
+                    "@modelcontextprotocol/server-sequential-thinking"
+                ]
+            }
+        }
+    }
+}

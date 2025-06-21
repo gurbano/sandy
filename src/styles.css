@@ -1,6 +1,16 @@
 /* src/styles.css */
 body {
     font-family: Arial, sans-serif;
-    padding: 2rem;
+    padding: 0;
+    margin: 0;
     background-color: #c96969;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+canvas {
+    border: 1px solid purple;
+    background-color: black;
 }

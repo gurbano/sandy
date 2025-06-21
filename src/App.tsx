@@ -1,10 +1,14 @@
-import logo from "./assets/logo.png";
+import React from 'react';
+import { Canvas } from "@react-three/fiber";
+import ShaderPlane from './ShaderPlane';
 
 const App = () => {
     return (
         <div>
-          <h1>Hello, React + TypeScript + Rollup!</h1>
-          <img src={logo} alt="Logo" />
+            <Canvas style={{ width: "600px", height: "600px" }}>
+                <ambientLight intensity={Math.PI / 2} />
+                <ShaderPlane />
+            </Canvas>
         </div>
     );
 };
