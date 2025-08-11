@@ -1,0 +1,162 @@
+import React from "react";
+import { createPortal } from "react-dom";
+
+export type BridgeEntry<T = any> = { Ctx: React.Context<T>; value: T };
+
+type Item = {
+  id: string;
+  node: React.ReactNode;
+  hidden: HTMLDivElement;
+  target: HTMLElement | null;
+  bridge: BridgeEntry[];
+};
+
+type KAContext = {
+  register(id: string, node: React.ReactNode): void;
+  unregister(id: string): void;
+  setTarget(id: string, el: HTMLElement | null): void;
+  setBridge(id: string, entries: BridgeEntry[]): void;
+};
+
+const KA = React.createContext<KAContext | null>(null);
+
+/** Host: montalo una sola volta in alto nell'albero dell'app */
+export function KeepAliveProvider({ children }: { children: React.ReactNode }) {
+  const [items, setItems] = React.useState<Map<string, Item>>(new Map());
+
+  const register = React.useCallback((id: string, node: React.ReactNode) => {
+    setItems(prev => {
+      if (prev.has(id)) return prev;
+      const next = new Map(prev);
+      const hidden = document.createElement("div");
+      hidden.style.display = "none";
+      document.body.appendChild(hidden);
+      next.set(id, { id, node, hidden, target: null, bridge: [] });
+      return next;
+    });
+  }, []);
+
+  const unregister = React.useCallback((id: string) => {
+    setItems(prev => {
+      const next = new Map(prev);
+      const it = next.get(id);
+      if (it) it.hidden.remove();
+      next.delete(id);
+      return next;
+    });
+  }, []);
+
+  const setTarget = React.useCallback((id: string, el: HTMLElement | null) => {
+    setItems(prev => {
+      const next = new Map(prev);
+      const it = next.get(id);
+      if (it) next.set(id, { ...it, target: el });
+      return next;
+    });
+  }, []);
+
+  const setBridge = React.useCallback((id: string, bridge: BridgeEntry[]) => {
+    setItems(prev => {
+      const next = new Map(prev);
+      const it = next.get(id);
+      if (it) next.set(id, { ...it, bridge });
+      return next;
+    });
+  }, []);
+
+  return (
+    <KA.Provider value={{ register, unregister, setTarget, setBridge }}>
+      {children}
+      {[...items.values()].map(it => {
+        const target = it.target ?? it.hidden;
+        // Applica i provider catturati dal TAB (Context Bridge)
+        const bridged = it.bridge.reduceRight(
+          (acc, { Ctx, value }) => <Ctx.Provider value={value}>{acc}</Ctx.Provider>,
+          it.node as React.ReactElement
+        );
+        // Terzo argomento (key) è supportato in React 17
+        return createPortal(bridged, target, it.id);
+      })}
+    </KA.Provider>
+  );
+}
+
+/** Registra un nodo "vivo" sotto l'Host (non rende nulla nel punto di chiamata) */
+function KeepAliveRegister({ id, children }: { id: string; children: React.ReactNode }) {
+  const ctx = React.useContext(KA);
+  if (!ctx) throw new Error("KeepAliveRegister must be inside KeepAliveProvider");
+  React.useEffect(() => {
+    ctx.register(id, children);
+    return () => ctx.unregister(id);
+  }, [ctx, id, children]);
+  return null;
+}
+
+/** Punto di mount nel TAB + definizione dei context bridge */
+export function KeepAliveBoundary({
+  id,
+  active,
+  children,
+  bridge,
+}: {
+  id: string;
+  active: boolean;
+  children: React.ReactNode;
+  /** Passa i context del TAB con i valori correnti */
+  bridge?: BridgeEntry[];
+}) {
+  const ctx = React.useContext(KA);
+  const ref = React.useRef<HTMLDivElement | null>(null);
+
+  if (!ctx) throw new Error("KeepAliveBoundary must be inside KeepAliveProvider");
+
+  // Registra l'istanza viva (la prima volta)
+  React.useEffect(() => {
+    ctx.register(id, children);
+    return () => ctx.unregister(id);
+    // Se vuoi che cambiare `children` ricrei l'istanza, aggiungi `children` nelle deps ↑
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ctx, id]);
+
+  // Aggiorna target quando il TAB diventa attivo/inattivo
+  React.useEffect(() => {
+    ctx.setTarget(id, active ? ref.current : null);
+    return () => ctx.setTarget(id, null);
+  }, [ctx, id, active]);
+
+  // Aggiorna i valori dei context provenienti dal TAB
+  React.useEffect(() => {
+    ctx.setBridge(id, bridge ?? []);
+  }, [ctx, id, bridge]);
+
+  // Mount point nel DOM del TAB
+  return (
+    <>
+      <KeepAliveRegister id={id}>{children}</KeepAliveRegister>
+      <div ref={ref} style={active ? undefined : { display: "none" }} />
+    </>
+  );
+}
+
+/** HOC opzionale se preferisci decorare direttamente il componente */
+export function keepAlive<P>(
+  idFactory: (props: P) => string,
+  bridgeFactory?: (props: P) => BridgeEntry[]
+) {
+  return function withKeepAlive(Wrapped: React.ComponentType<P>) {
+    const Alive: React.FC<P & { active: boolean }> = (props) => {
+      const id = idFactory(props as P);
+      const bridge = bridgeFactory ? bridgeFactory(props as P) : [];
+      // NOTA: il componente è istanziato una volta nell'Host; il mount point è qui
+      return (
+        <KeepAliveBoundary id={id} active={(props as any).active} bridge={bridge}>
+          <Wrapped {...(props as P)} />
+        </KeepAliveBoundary>
+      );
+    };
+    Alive.displayName = `keepAlive(${Wrapped.displayName || Wrapped.name || "Component"})`;
+    return Alive;
+  };
+}
+--------------------------
+
